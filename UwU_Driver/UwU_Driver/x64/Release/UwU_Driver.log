@@ -1,0 +1,29 @@
+﻿  Building 'UwU_Driver' with toolset 'WindowsKernelModeDriver10.0' and the 'Universal' target platform.
+  Stamping x64\Release\UwU_Driver.inf
+  Stamping [Version] section with DriverVer=10/09/2026,18.55.38.27
+  Driver.c
+  ldisasm.c
+  Создание кода...
+  UwU_Driver.vcxproj -> C:\Users\Shizo\Desktop\UwU_Driver\x64\Release\UwU_Driver.sys
+  Done Adding Additional Store
+  Successfully signed: C:\Users\Shizo\Desktop\UwU_Driver\x64\Release\UwU_Driver.sys
+  
+  Driver is 'Universal'.
+  ........................
+  Signability test complete.
+  
+  Errors:
+  None
+  
+  Warnings:
+  None
+  
+  Catalog generation complete.
+  C:\Users\Shizo\Desktop\UwU_Driver\x64\Release\UwU_Driver\uwu_driver.cat
+  Set catalog attribute.
+  WdkVersion: 10.0.26100.0
+  Set catalog attribute.
+  WdkAssemblyVersion: 10.0.26100.6584
+  Done Adding Additional Store
+  Successfully signed: C:\Users\Shizo\Desktop\UwU_Driver\x64\Release\UwU_Driver\uwu_driver.cat
+  

@@ -1,0 +1,11 @@
+﻿  Building 'UwU_Driver' with toolset 'WindowsKernelModeDriver10.0' and the 'Universal' target platform.
+  Stamping x64\Debug\UwU_Driver.inf
+  Stamping [Version] section with DriverVer=10/09/2026,18.48.3.817
+  Driver.c
+  UwU_Driver.vcxproj -> C:\Users\Shizo\Desktop\UwU_Driver\x64\Debug\UwU_Driver.sys
+  Done Adding Additional Store
+  Successfully signed: C:\Users\Shizo\Desktop\UwU_Driver\x64\Debug\UwU_Driver.sys
+  
+  Driver is 'Universal'.
+  ...........
+x64\Debug\inf2catOutput.log : Inf2Cat error -1073741510: "Inf2Cat, unknown failure." Double click to see the tool output.

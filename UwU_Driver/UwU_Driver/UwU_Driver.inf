@@ -1,0 +1,62 @@
+;
+; UwU_Driver.inf
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System ; TODO: specify appropriate Class
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318} ; TODO: specify appropriate ClassGuid
+Provider    = %ManufacturerName%
+CatalogFile = UwU_Driver.cat
+DriverVer   = ; TODO: set DriverVer in stampinf property pages
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+UwU_Driver.sys = 1,,
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$.10.0...16299 ; %13% support introduced in build 16299
+
+[Standard.NT$ARCH$.10.0...16299]
+%UwU_Driver.DeviceDesc% = UwU_Driver_Device, Root\UwU_Driver ; TODO: edit hw-id
+
+[UwU_Driver_Device.NT]
+CopyFiles = File_Copy
+
+[File_Copy]
+UwU_Driver.sys
+
+;-------------- Service installation
+[UwU_Driver_Device.NT.Services]
+AddService = UwU_Driver,%SPSVCINST_ASSOCSERVICE%, UwU_Driver_Service_Inst
+
+; -------------- UwU_Driver driver install sections
+[UwU_Driver_Service_Inst]
+DisplayName    = %UwU_Driver.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\UwU_Driver.sys
+
+[UwU_Driver_Device.NT.Wdf]
+KmdfService = UwU_Driver, UwU_Driver_wdfsect
+
+[UwU_Driver_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE = 0x00000002
+ManufacturerName = "<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+DiskName = "UwU_Driver Installation Disk"
+UwU_Driver.DeviceDesc = "UwU_Driver Device"
+UwU_Driver.SVCDESC = "UwU_Driver Service"
