@@ -1,5 +1,7 @@
 # UwU_Driver Made By @Br0kenFox (Telegram) 
 
+Strictly for educational purposes
+
 Hypervisor-based Windows 11 Test Mode Patch (EPT Hooking) AKA Ring 0 (Driver) BattleEye Bypass 
 
 ---
