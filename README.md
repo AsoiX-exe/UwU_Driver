@@ -131,3 +131,4 @@ My Telegram Use: @Br0kenFox
 My Telegram Channel: t.me/MadnessCode
 
 Thanks everyone for your support ^w^
+And Special thanks for @AsoiX_S for the bug fix
