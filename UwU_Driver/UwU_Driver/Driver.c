@@ -25,6 +25,20 @@ static int     g_copy_len   = 0;
 static BOOLEAN g_hooked     = FALSE;
 
 
+typedef struct _PATCH_CTX {
+    PVOID Dst;
+    const VOID* Src;
+    SIZE_T Len;
+} PATCH_CTX;
+
+
+static ULONG_PTR PatchCodeIpi(ULONG_PTR ctx) {
+    PATCH_CTX* p = (PATCH_CTX*)ctx;
+    RtlCopyMemory(p->Dst, p->Src, p->Len);
+    return 0;
+}
+
+
 static NTSTATUS WriteBytes(PVOID dst, const VOID* src, SIZE_T len) {
     PMDL mdl = IoAllocateMdl(dst, (ULONG)len, FALSE, FALSE, NULL);
     if (!mdl) return STATUS_INSUFFICIENT_RESOURCES;
@@ -45,8 +59,10 @@ static NTSTATUS WriteBytes(PVOID dst, const VOID* src, SIZE_T len) {
     }
 
     NTSTATUS st = MmProtectMdlSystemAddress(mdl, PAGE_EXECUTE_READWRITE);
-    if (NT_SUCCESS(st))
-        RtlCopyMemory(mapped, src, len);
+    if (NT_SUCCESS(st)) {
+        PATCH_CTX ctx = { mapped, src, len };
+        KeIpiGenericCall(PatchCodeIpi, (ULONG_PTR)&ctx);
+    }
 
     MmUnmapLockedPages(mapped, mdl);
     MmUnlockPages(mdl);
