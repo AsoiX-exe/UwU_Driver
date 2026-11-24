@@ -77,6 +77,29 @@ UwU_Driver/
 
 ---
 
+## Требования к запуску
+
+> **Windows 11 должна быть переведена в тестовый режим (Test Mode).**
+> Драйвер не имеет EV-сертификата Microsoft, поэтому перед загрузкой необходимо:
+> 1. Включить тестовый режим: `bcdedit /set testsigning on` → перезагрузка.
+> 2. Подписать `UwU_Driver.sys` **самоподписным сертификатом** (self-signed):
+>
+> ```powershell
+> # Создать самоподписный сертификат (однократно)
+> New-SelfSignedCertificate -Subject "CN=UwU Test" -CertStoreLocation Cert:\CurrentUser\My -Type CodeSigningCert
+>
+> # Экспортировать и добавить в доверенные корневые ЦС и издателей драйверов
+> $cert = (Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq "CN=UwU Test" })[0]
+> Export-Certificate -Cert $cert -FilePath UwU_Test.cer
+> Import-Certificate -FilePath UwU_Test.cer -CertStoreLocation Cert:\LocalMachine\Root
+> Import-Certificate -FilePath UwU_Test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+>
+> # Подписать драйвер
+> signtool sign /sha1 $cert.Thumbprint /fd sha256 /v x64\Release\UwU_Driver.sys
+> ```
+>
+> Без этих шагов Windows откажет в загрузке драйвера с ошибкой `0xC0000428` (недействительная подпись образа).
+
 ## Загрузка (тестовая машина / VM)
 
 ```powershell
