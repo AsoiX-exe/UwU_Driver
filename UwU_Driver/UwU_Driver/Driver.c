@@ -1,28 +1,9 @@
-/*
- * UwU_Driver - CTF Educational Kernel Driver
- *
- * APPROACH: Inline hook NtQuerySystemInformation (class 103 = SystemCodeIntegrityInformation)
- *
- * WHY NtQuerySystemInformation INSTEAD OF SeCodeIntegrityQueryInformation:
- *   - NtQuerySystemInformation is EXPORTED -> found via MmGetSystemRoutineAddress, no pattern scan
- *   - SeCodeIntegrityQueryInformation is internal, requires fragile pattern scan
- *   - All callers (ci.dll, user-mode NtQuerySystemInformation, WinAPI calls) go through here
- *
- * TRAMPOLINE CORRECTNESS:
- *   - ldisasm_aligned() finds first instruction boundary >= HOOK_SIZE (14 bytes)
- *   - FixRipRelative() patches any RIP-relative instructions in the copied prologue
- *     so they still address the same absolute target from the new trampoline location
- *
- * BITS CLEARED: 0x02 (TESTSIGN) | 0x08 (UMCI or related test flag)
- */
+
 
 #include <ntddk.h>
 #include <wdm.h>
 #include "ldisasm.h"
 
-// ============================================================
-// CONSTANTS AND TYPES
-// ============================================================
 
 #define CI_TESTSIGN_BITS        (0x00000002UL | 0x00000008UL)
 #define SystemCodeIntegrityInfo 103
@@ -36,9 +17,6 @@ typedef struct _CI_INFO {
 
 typedef NTSTATUS (NTAPI *PFN_NTQSI)(ULONG, PVOID, ULONG, PULONG);
 
-// ============================================================
-// GLOBALS
-// ============================================================
 
 static PUCHAR  g_ntqsi_fn   = NULL;
 static PUCHAR  g_trampoline = NULL;
@@ -46,10 +24,6 @@ static UINT8   g_orig[MAX_COPY];
 static int     g_copy_len   = 0;
 static BOOLEAN g_hooked     = FALSE;
 
-// ============================================================
-// MDL WRITE (bypass read-only code page)
-// Uses MmProbeAndLockPages - correct for non-paged kernel VA
-// ============================================================
 
 static NTSTATUS WriteBytes(PVOID dst, const VOID* src, SIZE_T len) {
     PMDL mdl = IoAllocateMdl(dst, (ULONG)len, FALSE, FALSE, NULL);
@@ -80,12 +54,7 @@ static NTSTATUS WriteBytes(PVOID dst, const VOID* src, SIZE_T len) {
     return st;
 }
 
-// ============================================================
-// RIP-RELATIVE FIXUP
-// Scans trampoline copy for ModRM mod=00 rm=5 (RIP-relative disp32)
-// and patches the displacement so the instruction still hits the same
-// absolute address from the new location.
-// ============================================================
+
 
 static void FixRipRelative(PUCHAR tramp, PUCHAR orig, int copy_len) {
     for (int off = 0; off < copy_len; ) {
@@ -93,7 +62,6 @@ static void FixRipRelative(PUCHAR tramp, PUCHAR orig, int copy_len) {
         int instr_len = ldisasm(p);
         if (instr_len <= 0) break;
 
-        // Skip prefixes + REX to reach opcode
         int idx = 0;
         while (idx < instr_len) {
             UINT8 b = p[idx];
@@ -130,9 +98,7 @@ static void FixRipRelative(PUCHAR tramp, PUCHAR orig, int copy_len) {
     }
 }
 
-// ============================================================
-// HOOK HANDLER
-// ============================================================
+
 
 static NTSTATUS NTAPI NtqsiHook(
     ULONG  cls,
@@ -149,12 +115,9 @@ static NTSTATUS NTAPI NtqsiHook(
     return st;
 }
 
-// ============================================================
-// INSTALL HOOK
-// ============================================================
 
 NTSTATUS InstallHook() {
-    // Query current CI state for logging
+
     CI_INFO ci = { sizeof(CI_INFO), 0 };
     {
         UNICODE_STRING fn;
@@ -166,10 +129,8 @@ NTSTATUS InstallHook() {
 
     if (!(ci.CodeIntegrityOptions & CI_TESTSIGN_BITS)) {
         KdPrint(("[UwU] TESTSIGN bits not set - not in test mode? skipping\n"));
-        // Install anyway so crackme gets intercepted if it checks differently
     }
 
-    // Resolve NtQuerySystemInformation via export table - no pattern scan needed
     UNICODE_STRING fn;
     RtlInitUnicodeString(&fn, L"NtQuerySystemInformation");
     g_ntqsi_fn = (PUCHAR)MmGetSystemRoutineAddress(&fn);
@@ -179,7 +140,6 @@ NTSTATUS InstallHook() {
     }
     KdPrint(("[UwU] NtQuerySystemInformation @ %p\n", g_ntqsi_fn));
 
-    // Find first instruction boundary >= HOOK_SIZE
     g_copy_len = ldisasm_aligned(g_ntqsi_fn, HOOK_SIZE);
     if (g_copy_len <= 0 || g_copy_len > MAX_COPY) {
         KdPrint(("[UwU] ldisasm_aligned failed (%d), using fallback 32\n", g_copy_len));
@@ -187,10 +147,8 @@ NTSTATUS InstallHook() {
     }
     KdPrint(("[UwU] Prologue copy: %d bytes\n", g_copy_len));
 
-    // Save original bytes
     RtlCopyMemory(g_orig, g_ntqsi_fn, g_copy_len);
 
-    // Allocate executable trampoline: [prologue copy] + [JMP back to fn+copy_len]
     g_trampoline = (PUCHAR)ExAllocatePool2(
         POOL_FLAG_NON_PAGED_EXECUTE,
         (SIZE_T)g_copy_len + HOOK_SIZE,
@@ -201,7 +159,6 @@ NTSTATUS InstallHook() {
     RtlCopyMemory(g_trampoline, g_orig, g_copy_len);
     FixRipRelative(g_trampoline, g_ntqsi_fn, g_copy_len);
 
-    // JMP back to fn+copy_len
     PUCHAR jb = g_trampoline + g_copy_len;
     jb[0] = 0xFF; jb[1] = 0x25;
     *(ULONG*)(jb + 2)  = 0;
@@ -209,7 +166,6 @@ NTSTATUS InstallHook() {
 
     KdPrint(("[UwU] Trampoline @ %p\n", g_trampoline));
 
-    // Build 14-byte hook patch: JMP -> NtqsiHook
     UINT8 patch[HOOK_SIZE];
     patch[0] = 0xFF; patch[1] = 0x25;
     *(ULONG*)(patch + 2)  = 0;
@@ -224,7 +180,6 @@ NTSTATUS InstallHook() {
     }
     g_hooked = TRUE;
 
-    // Verify - this call goes through our hook
     CI_INFO ci2 = { sizeof(CI_INFO), 0 };
     {
         UNICODE_STRING fn2;
@@ -249,9 +204,7 @@ VOID RemoveHook() {
     KdPrint(("[UwU] Hook removed\n"));
 }
 
-// ============================================================
-// REGISTRY PATCH
-// ============================================================
+
 
 VOID PatchRegistry() {
     UNICODE_STRING keyPath = RTL_CONSTANT_STRING(
@@ -272,9 +225,6 @@ VOID PatchRegistry() {
     KdPrint(("[UwU] Registry: TestSigning -> 0\n"));
 }
 
-// ============================================================
-// DRIVER ENTRY / UNLOAD
-// ============================================================
 
 VOID DriverUnload(PDRIVER_OBJECT DriverObject) {
     UNREFERENCED_PARAMETER(DriverObject);
