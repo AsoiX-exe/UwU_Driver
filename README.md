@@ -125,3 +125,9 @@ sc delete UwU_Driver
 ```
 
 `DriverUnload` восстанавливает оригинальный пролог `NtQuerySystemInformation` перед освобождением трамплина.
+
+
+My Telegram Use: @Br0kenFox
+My Telegram Channel: t.me/MadnessCode
+
+Thanks everyone for your support ^w^
